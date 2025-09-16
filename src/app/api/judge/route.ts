@@ -37,7 +37,12 @@ const ALLERGEN_DICTIONARY = {
 
 // 独自判定システム
 function customAllergenAnalysis(chatgptResult: any, selectedAllergens: string[]) {
-  const analysis = {
+  const analysis: {
+    finalResult: string;
+    corrections: string[];
+    warnings: string[];
+    details: string;
+  } = {
     finalResult: chatgptResult.result,
     corrections: [],
     warnings: [],
@@ -58,15 +63,18 @@ function customAllergenAnalysis(chatgptResult: any, selectedAllergens: string[])
     }
   }
 
-  // 2. 類語・別名のチェック
+  // 2. 類語・別名のチェック（型安全版）
   for (const allergen of selectedAllergens) {
-    const aliases = ALLERGEN_DICTIONARY.allergen_aliases[allergen];
-    if (aliases) {
+    if (allergen in ALLERGEN_DICTIONARY.allergen_aliases) {
+      const aliases =
+        ALLERGEN_DICTIONARY.allergen_aliases[
+          allergen as keyof typeof ALLERGEN_DICTIONARY["allergen_aliases"]
+        ];
       for (const alias of aliases) {
         if (chatgptResult.ingredients?.includes(alias)) {
           analysis.warnings.push(`${alias}は${allergen}の別名・関連成分です`);
-          if (analysis.finalResult === 'success') {
-            analysis.finalResult = 'danger';
+          if (analysis.finalResult === "success") {
+            analysis.finalResult = "danger";
             analysis.details = `${alias}が含まれています。これは${allergen}アレルゲンです。`;
           }
         }
