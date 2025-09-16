@@ -1,172 +1,89 @@
-'use client';
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+"use client";
 
-interface JudgmentResult {
-  result: 'success' | 'warning' | 'danger';
-  message: string;
-  details: string;
-  timestamp: string;
-}
+import Link from "next/link";
+import { useEffect, useState } from "react";
+
+type Result = "success" | "warning" | "danger";
 
 export default function ResultPage() {
-  const [result, setResult] = useState<JudgmentResult | null>(null);
-  const [showDetails, setShowDetails] = useState(false);
-  const router = useRouter();
+  const [data, setData] = useState<any>(null);
 
   useEffect(() => {
-    // localStorageから判定結果を取得
-    const storedResult = localStorage.getItem('judgmentResult');
-    if (storedResult) {
-      setResult(JSON.parse(storedResult));
-    } else {
-      // 結果がない場合はホームに戻す
-      router.push('/');
-    }
-  }, [router]);
+    const raw = sessionStorage.getItem("lastJudgment");
+    if (raw) setData(JSON.parse(raw));
+  }, []);
 
-  const getResultConfig = (resultType: string) => {
-    switch (resultType) {
-      case 'success':
-        return {
-          emoji: '✅',
-          title: '合格',
-          bgColor: 'bg-green-50',
-          borderColor: 'border-green-200',
-          textColor: 'text-green-800',
-          buttonColor: 'bg-green-100 text-green-700'
-        };
-      case 'warning':
-        return {
-          emoji: '⚠️',
-          title: '要注意',
-          bgColor: 'bg-orange-50',
-          borderColor: 'border-orange-200',
-          textColor: 'text-orange-800',
-          buttonColor: 'bg-orange-100 text-orange-700'
-        };
-      case 'danger':
-        return {
-          emoji: '❌',
-          title: '不合格',
-          bgColor: 'bg-red-50',
-          borderColor: 'border-red-200',
-          textColor: 'text-red-800',
-          buttonColor: 'bg-red-100 text-red-700'
-        };
-      default:
-        return {
-          emoji: '❓',
-          title: '不明',
-          bgColor: 'bg-gray-50',
-          borderColor: 'border-gray-200',
-          textColor: 'text-gray-800',
-          buttonColor: 'bg-gray-100 text-gray-700'
-        };
-    }
+  const pill = (r: Result) => {
+    if (r === "success") return "bg-green-50 text-green-700 border-green-300";
+    if (r === "warning") return "bg-yellow-50 text-yellow-800 border-yellow-300";
+    return "bg-red-50 text-red-700 border-red-300";
   };
 
-  const handleFeedback = () => {
-    router.push('/feedback');
+  const title = (r: Result) => {
+    if (r === "success") return "合格：安心してお召し上がりいただけます";
+    if (r === "warning") return "要注意：念のためご確認ください";
+    return "不合格：このアレルゲンが含まれています";
   };
-
-  if (!result) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">結果を読み込み中...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const config = getResultConfig(result.result);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* モバイル専用固定ヘッダー */}
-      <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 z-10">
-        <div className="flex items-center justify-between">
-          <Link href="/photo-capture" className="text-orange-500 text-lg">
-            ← 戻る
-          </Link>
-          <h1 className="text-lg font-semibold text-gray-900">判定結果</h1>
-          <div className="w-12"></div>
-        </div>
+    <div className="min-h-screen bg-white">
+      <div className="mx-auto max-w-3xl px-4 py-5 flex items-center justify-between">
+        <Link href="/photo-capture" className="btn-secondary">← 戻る</Link>
+        <div className="text-base text-gray-500">4 / 5</div>
       </div>
 
-      <div className="px-4 py-6">
-        {/* 判定結果メイン */}
-        <div className={`${config.bgColor} ${config.borderColor} border-2 rounded-2xl p-6 mb-6 text-center`}>
-          <div className="text-6xl mb-4">{config.emoji}</div>
-          <h2 className={`text-2xl font-bold mb-2 ${config.textColor}`}>
-            {config.title}
-          </h2>
-          <p className={`${config.textColor} text-lg`}>
-            {result.message}
-          </p>
-        </div>
+      <div className="mx-auto max-w-3xl px-4 pb-24">
+        <h1 className="text-2xl font-bold mb-4">判定結果</h1>
 
-        {/* 詳細説明（アコーディオン） */}
-        <div className="bg-white rounded-2xl shadow-sm mb-6">
-          <button
-            onClick={() => setShowDetails(!showDetails)}
-            className={`w-full p-4 text-left flex items-center justify-between ${config.buttonColor} rounded-2xl transition-all`}
-          >
-            <span className="font-semibold">詳細な説明</span>
-            <span className={`transform transition-transform ${showDetails ? 'rotate-180' : ''}`}>
-              ⌄
-            </span>
-          </button>
-          
-          {showDetails && (
-            <div className="p-4 border-t border-gray-100">
-              <p className="text-gray-700 leading-relaxed">
-                {result.details}
+        {!data ? (
+          <div className="card">結果が見つかりません。最初からやり直してください。</div>
+        ) : (
+          <>
+            <div className={`card mb-4`}>
+              <div className={`pill ${pill(data.finalResult)} mb-3`}>
+                判定：{data.finalResult}
+              </div>
+              <h2 className="text-xl font-semibold mb-2">{data.message}</h2>
+              <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                {data.details}
               </p>
             </div>
-          )}
-        </div>
 
-        {/* 気づいてよかった！メッセージ */}
-        {result.result === 'danger' && (
-          <div className="bg-blue-50 rounded-xl p-4 mb-6 text-center">
-            <div className="text-2xl mb-2">💡</div>
-            <p className="text-blue-800 font-semibold">
-              気づいてよかった！
-            </p>
-            <p className="text-blue-700 text-sm mt-1">
-              事前にチェックできて安心ですね
-            </p>
-          </div>
+            {/* 補足（辞書補正・警告） */}
+            {(data.finalAnalysis?.corrections?.length || 0) > 0 && (
+              <div className="card mb-4">
+                <h3 className="font-semibold mb-2">補正</h3>
+                <ul className="list-disc pl-5 text-gray-700">
+                  {data.finalAnalysis.corrections.map((c: string, i: number) => (
+                    <li key={i}>{c}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {(data.finalAnalysis?.warnings?.length || 0) > 0 && (
+              <div className="card mb-4">
+                <h3 className="font-semibold mb-2">注意事項</h3>
+                <ul className="list-disc pl-5 text-gray-700">
+                  {data.finalAnalysis.warnings.map((w: string, i: number) => (
+                    <li key={i}>{w}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </>
         )}
 
-        {/* 再判定ボタン */}
-        <div className="text-center mb-6">
-          <Link
-            href="/photo-capture"
-            className="inline-block bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-xl transition-all transform active:scale-95"
-          >
-            📸 別の商品を判定する
-          </Link>
+        <div className="fixed left-0 right-0 bottom-0 mx-auto max-w-3xl px-4 py-4 bg-white border-t">
+          <div className="flex gap-3">
+            <Link href="/photo-capture" className="btn-secondary flex-1 text-center">
+              もう一度撮影
+            </Link>
+            <Link href="/result/feedback" className="btn-primary flex-1 text-center">
+              フィードバックへ
+            </Link>
+          </div>
         </div>
-
-        {/* タイムスタンプ */}
-        <div className="text-center text-xs text-gray-500 mb-20">
-          判定日時: {new Date(result.timestamp).toLocaleString('ja-JP')}
-        </div>
-      </div>
-
-      {/* 固定フィードバックボタン */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4">
-        <button
-          onClick={handleFeedback}
-          className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-4 rounded-xl transition-all transform active:scale-95"
-        >
-          この結果について教える
-        </button>
       </div>
     </div>
   );

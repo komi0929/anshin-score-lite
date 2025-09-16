@@ -1,246 +1,149 @@
-'use client';
-import { useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+"use client";
 
-const DISSATISFACTION_REASONS = [
-  '判定結果が間違っている',
-  '判定理由の説明が分かりにくい',
-  '原材料の文字を正しく読み取れていない',
-  '判定に時間がかかりすぎる',
-  'アレルゲンの選択肢に欲しいものがない',
-  'その他'
+import Link from "next/link";
+import { useState } from "react";
+
+const REASONS = [
+  "判定結果が間違っている",
+  "判定理由の説明が分かりにくい",
+  "原材料の文字を正しく読み取れていない",
+  "判定に時間がかかりすぎる",
+  "アレルゲンの選択肢に欲しいものがない",
+  "その他",
 ];
 
 export default function FeedbackPage() {
-  const [satisfaction, setSatisfaction] = useState<'satisfied' | 'dissatisfied' | null>(null);
-  const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
-  const [otherReason, setOtherReason] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showShareButtons, setShowShareButtons] = useState(false);
-  const router = useRouter();
+  const [satisfied, setSatisfied] = useState<boolean | null>(null);
+  const [checked, setChecked] = useState<string[]>([]);
+  const [free, setFree] = useState("");
+  const [done, setDone] = useState(false);
 
-  const toggleReason = (reason: string) => {
-    setSelectedReasons(prev => 
-      prev.includes(reason) 
-        ? prev.filter(r => r !== reason)
-        : [...prev, reason]
+  const toggle = (reason: string) => {
+    setChecked((cur) =>
+      cur.includes(reason) ? cur.filter((x) => x !== reason) : [...cur, reason]
     );
   };
 
-  const handleSubmit = async () => {
-    if (!satisfaction) {
-      alert('満足度を選択してください');
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    // フィードバックデータを作成
-    const feedbackData = {
-      satisfaction,
-      reasons: satisfaction === 'dissatisfied' ? selectedReasons : [],
-      otherReason: satisfaction === 'dissatisfied' ? otherReason : '',
-      timestamp: new Date().toISOString()
+  const submit = async () => {
+    // MVP: とりあえずLocalStorageへ保存（将来はKVへ送信）
+    const payload = {
+      satisfied,
+      reasons: checked,
+      detail: free.trim(),
+      ts: new Date().toISOString(),
+      last: sessionStorage.getItem("lastJudgment"),
     };
-
-    // localStorageに保存（実際のAPIは後で実装）
-    localStorage.setItem('feedback', JSON.stringify(feedbackData));
-
-    // 満足の場合はSNSシェアボタンを表示
-    if (satisfaction === 'satisfied') {
-      setShowShareButtons(true);
+    try {
+      const past = JSON.parse(localStorage.getItem("feedbacks") || "[]");
+      past.push(payload);
+      localStorage.setItem("feedbacks", JSON.stringify(past));
+      setDone(true);
+    } catch {
+      setDone(true);
     }
-
-    setIsSubmitting(false);
-
-    // 2秒後にホームに戻る
-    setTimeout(() => {
-      router.push('/');
-    }, 2000);
   };
 
-  const shareToTwitter = () => {
-    const text = `📱 あんしんスコアライト で食品判定完了！
-🔍 原材料写真を撮るだけで、アレルギー対応が一瞬で分かる
-✅ 今日も安心して食べられました
-
-#あんしんスコアライト #アレルギー対応 #食の安心`;
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
-  };
-
-  const shareToLine = () => {
-    const text = `あんしんスコアライト で食品判定完了！原材料写真を撮るだけで、アレルギー対応が一瞬で分かります。`;
-    const url = `https://line.me/R/msg/text/?${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
-  };
-
-  if (showShareButtons) {
+  if (done) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="px-4 py-8">
-          <div className="text-center mb-8">
-            <div className="text-6xl mb-4">🎉</div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              フィードバックありがとうございます！
-            </h1>
-            <p className="text-gray-600">
-              よろしければ、みんなにも教えてください
+      <div className="min-h-screen bg-white">
+        <div className="mx-auto max-w-3xl px-4 py-5 flex items-center justify-between">
+          <Link href="/result" className="btn-secondary">← 戻る</Link>
+          <div className="text-base text-gray-500">5 / 5</div>
+        </div>
+        <div className="mx-auto max-w-3xl px-4 pb-10">
+          <div className="card">
+            <h1 className="text-2xl font-bold mb-2">ご協力ありがとうございました！</h1>
+            <p className="text-gray-700 mb-4">
+              いただいたフィードバックは今後の改善に活用します。
             </p>
-          </div>
-
-          <div className="space-y-4 mb-8">
-            <button
-              onClick={shareToTwitter}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 rounded-xl flex items-center justify-center space-x-3 transition-all transform active:scale-95"
-            >
-              <span className="text-xl">🐦</span>
-              <span>Twitterでシェア</span>
-            </button>
-
-            <button
-              onClick={shareToLine}
-              className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-4 rounded-xl flex items-center justify-center space-x-3 transition-all transform active:scale-95"
-            >
-              <span className="text-xl">💬</span>
-              <span>LINEでシェア</span>
-            </button>
-          </div>
-
-          <div className="text-center">
-            <Link
-              href="/"
-              className="inline-block bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-8 rounded-xl transition-all transform active:scale-95"
-            >
-              ホームに戻る
-            </Link>
+            <div className="flex gap-3">
+              <Link href="/" className="btn-secondary">トップへ戻る</Link>
+              <a
+                href="https://twitter.com/intent/tweet?text=%E3%81%82%E3%82%93%E3%81%97%E3%82%93%E3%82%B9%E3%82%B3%E3%82%A2%E3%83%A9%E3%82%A4%E3%83%88%E3%81%A7%E9%A3%9F%E5%93%81%E5%88%A4%E5%AE%9A%E5%AE%8C%E4%BA%86%EF%BC%81%E5%8E%9F%E6%9D%90%E6%96%99%E5%86%99%E7%9C%9F%E3%82%92%E6%92%AE%E3%82%8B%E3%81%A0%E3%81%91%E3%81%A7%E3%80%81%E3%82%A2%E3%83%AC%E3%83%AB%E3%82%AE%E3%83%BC%E5%AF%BE%E5%BF%9C%E3%81%8C%E4%B8%80%E7%9E%AC%E3%81%A7%E5%88%86%E3%81%8B%E3%82%8B%20%23%E3%81%82%E3%82%93%E3%81%97%E3%82%93%E3%82%B9%E3%82%B3%E3%82%A2%E3%83%A9%E3%82%A4%E3%83%88"
+                target="_blank"
+                rel="noreferrer"
+                className="btn-primary"
+              >
+                X（旧Twitter）でシェア
+              </a>
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
+  const canSubmit = satisfied !== null && (satisfied || checked.length > 0 || free.trim().length > 0);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* モバイル専用固定ヘッダー */}
-      <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 z-10">
-        <div className="flex items-center justify-between">
-          <Link href="/result" className="text-orange-500 text-lg">
-            ← 戻る
-          </Link>
-          <h1 className="text-lg font-semibold text-gray-900">フィードバック</h1>
-          <div className="w-12"></div>
-        </div>
+    <div className="min-h-screen bg-white">
+      <div className="mx-auto max-w-3xl px-4 py-5 flex items-center justify-between">
+        <Link href="/result" className="btn-secondary">← 戻る</Link>
+        <div className="text-base text-gray-500">5 / 5</div>
       </div>
 
-      <div className="px-4 py-6">
-        {/* 満足度選択 */}
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">
-            判定結果はいかがでしたか？
-          </h2>
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={() => setSatisfaction('satisfied')}
-              className={`p-6 rounded-2xl border-2 transition-all transform active:scale-95 ${
-                satisfaction === 'satisfied'
-                  ? 'border-green-500 bg-green-50 text-green-700'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}
-            >
-              <div className="text-4xl mb-2">😊</div>
-              <div className="font-semibold">満足</div>
-            </button>
+      <div className="mx-auto max-w-3xl px-4 pb-24">
+        <h1 className="text-2xl font-bold mb-4">フィードバック</h1>
 
+        <div className="card mb-4">
+          <div className="text-sm text-gray-600 mb-2">満足度</div>
+          <div className="flex gap-3">
             <button
-              onClick={() => setSatisfaction('dissatisfied')}
-              className={`p-6 rounded-2xl border-2 transition-all transform active:scale-95 ${
-                satisfaction === 'dissatisfied'
-                  ? 'border-red-500 bg-red-50 text-red-700'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}
+              onClick={() => setSatisfied(true)}
+              className={`pill ${satisfied === true ? "bg-green-50 text-green-700 border-green-300" : "bg-white border-gray-200 text-gray-800"}`}
             >
-              <div className="text-4xl mb-2">😔</div>
-              <div className="font-semibold">不満足</div>
+              😊 満足
+            </button>
+            <button
+              onClick={() => setSatisfied(false)}
+              className={`pill ${satisfied === false ? "bg-red-50 text-red-700 border-red-300" : "bg-white border-gray-200 text-gray-800"}`}
+            >
+              😥 不満足
             </button>
           </div>
         </div>
 
-        {/* 不満足の理由（不満足選択時のみ表示） */}
-        {satisfaction === 'dissatisfied' && (
+        {satisfied === false && (
           <>
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                不満足の理由を教えてください（複数選択可）
-              </h3>
-              <div className="space-y-3">
-                {DISSATISFACTION_REASONS.map((reason) => (
+            <div className="card mb-4">
+              <div className="text-sm text-gray-600 mb-2">不満足の理由（複数選択可）</div>
+              <div className="flex flex-wrap gap-2">
+                {REASONS.map((r) => (
                   <button
-                    key={reason}
-                    onClick={() => toggleReason(reason)}
-                    className={`w-full text-left p-4 rounded-xl border transition-all transform active:scale-95 ${
-                      selectedReasons.includes(reason)
-                        ? 'border-orange-500 bg-orange-50 text-orange-700'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
-                    }`}
+                    key={r}
+                    onClick={() => toggle(r)}
+                    className={`pill ${checked.includes(r)
+                        ? "bg-orange-50 text-orange-700 border-orange-300"
+                        : "bg-white text-gray-800 border-gray-200"}`}
                   >
-                    <div className="flex items-center">
-                      <div className={`w-5 h-5 rounded border-2 mr-3 flex items-center justify-center ${
-                        selectedReasons.includes(reason)
-                          ? 'border-orange-500 bg-orange-500'
-                          : 'border-gray-300'
-                      }`}>
-                        {selectedReasons.includes(reason) && (
-                          <span className="text-white text-xs">✓</span>
-                        )}
-                      </div>
-                      <span className="text-sm">{reason}</span>
-                    </div>
+                    {r}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                詳しく教えてください（任意）
-              </h3>
+            <div className="card mb-6">
+              <div className="text-sm text-gray-600 mb-2">詳しく（任意）</div>
               <textarea
-                value={otherReason}
-                onChange={(e) => setOtherReason(e.target.value)}
-                placeholder="改善してほしい点や感想をお聞かせください"
-                className="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 min-h-[100px] resize-none"
+                className="w-full min-h-[120px] p-4 border border-gray-200 rounded-xl resize-none"
+                placeholder="どの点が気になりましたか？"
+                value={free}
+                onChange={(e) => setFree(e.target.value)}
               />
             </div>
           </>
         )}
 
-        {/* 送信ボタン */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4">
+        <div className="fixed left-0 right-0 bottom-0 mx-auto max-w-3xl px-4 py-4 bg-white border-t">
           <button
-            onClick={handleSubmit}
-            disabled={!satisfaction || isSubmitting}
-            className={`w-full py-4 rounded-xl font-semibold text-lg transition-all ${
-              satisfaction && !isSubmitting
-                ? 'bg-orange-500 hover:bg-orange-600 text-white transform active:scale-95'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
+            onClick={submit}
+            disabled={!canSubmit}
+            className={`w-full text-center ${!canSubmit ? "btn-secondary opacity-60 cursor-not-allowed" : "btn-primary"}`}
           >
-            {isSubmitting ? (
-              <div className="flex items-center justify-center space-x-2">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                <span>送信中...</span>
-              </div>
-            ) : (
-              '送信する'
-            )}
+            送信する
           </button>
         </div>
       </div>
-
-      {/* ボタン用の余白 */}
-      <div className="h-20"></div>
     </div>
   );
 }
